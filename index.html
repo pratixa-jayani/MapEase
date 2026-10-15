@@ -1,0 +1,631 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#064e3b">
+  <title>MapEase | Explore Your World</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      background: #f7faf8;
+      color: #172b25;
+    }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    .hero {
+      background:
+        radial-gradient(ellipse at 85% 15%, rgba(110,231,183,.19), transparent 35%),
+        linear-gradient(135deg, #052e25 0%, #065f46 55%, #087f5b 100%);
+    }
+
+    .glass {
+      background: rgba(255,255,255,.09);
+      border: 1px solid rgba(255,255,255,.15);
+      backdrop-filter: blur(10px);
+    }
+
+    .search-panel {
+      margin-top: -38px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .field {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid #dce7e1;
+      background: #fff;
+      padding: 13px 14px;
+      border-radius: 12px;
+      color: #172b25;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    .field:focus {
+      border-color: #059669;
+      box-shadow: 0 0 0 3px rgba(5,150,105,.12);
+    }
+
+    .primary-btn {
+      background: #047857;
+      color: white;
+      transition: background .2s, transform .2s;
+    }
+
+    .primary-btn:hover {
+      background: #065f46;
+      transform: translateY(-1px);
+    }
+
+    .primary-btn:disabled {
+      opacity: .65;
+      cursor: wait;
+      transform: none;
+    }
+
+    .category-btn {
+      border: 1px solid #e2e8e5;
+      background: white;
+      color: #475569;
+      transition: all .2s;
+    }
+
+    .category-btn:hover {
+      border-color: #10b981;
+      color: #047857;
+    }
+
+    .category-btn.active {
+      background: #d1fae5;
+      color: #065f46;
+      border-color: #6ee7b7;
+      font-weight: 700;
+    }
+
+    .result-card {
+      min-width: 0;
+      background: white;
+      border: 1px solid #e5ece8;
+      border-radius: 17px;
+      padding: 20px;
+      transition: transform .2s, box-shadow .2s, border-color .2s;
+      animation: appear .3s ease both;
+    }
+
+    .result-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 28px rgba(15, 60, 43, .08);
+      border-color: #a7f3d0;
+    }
+
+    .result-icon {
+      display: grid;
+      place-items: center;
+      width: 43px;
+      height: 43px;
+      flex-shrink: 0;
+      border-radius: 13px;
+      background: #ecfdf5;
+      color: #047857;
+      font-size: 21px;
+    }
+
+    .map-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: #047857;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .map-link:hover {
+      color: #064e3b;
+      text-decoration: underline;
+    }
+
+    .status-box {
+      border-radius: 12px;
+      padding: 13px 15px;
+      background: #f0fdf4;
+      color: #166534;
+    }
+
+    .status-box.error {
+      background: #fff1f2;
+      color: #be123c;
+    }
+
+    .status-box.neutral {
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    .skeleton {
+      height: 160px;
+      border-radius: 16px;
+      background: linear-gradient(90deg, #eef2ef 25%, #f8faf9 50%, #eef2ef 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.3s infinite;
+    }
+
+    @keyframes shimmer {
+      to { background-position: -200% 0; }
+    }
+
+    @keyframes appear {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 640px) {
+      .search-panel { margin-top: -24px; }
+      .hero-title { font-size: 2.3rem; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- NAVIGATION -->
+  <header class="hero text-white">
+    <nav class="max-w-6xl mx-auto px-5 py-5 flex items-center justify-between gap-4">
+      <a href="#" class="flex items-center gap-3 no-underline text-white">
+        <span class="grid place-items-center w-11 h-11 rounded-2xl bg-white/15 text-2xl">
+          ⌖
+        </span>
+        <span>
+          <span class="block text-xl font-extrabold tracking-tight">MapEase</span>
+          <span class="block text-xs text-emerald-100">Explore with confidence</span>
+        </span>
+      </a>
+
+      <a href="https://www.openstreetmap.org/"
+         target="_blank" rel="noopener noreferrer"
+         class="hidden sm:inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm hover:bg-white/15">
+        OpenStreetMap ↗
+      </a>
+    </nav>
+
+    <!-- HERO -->
+    <section class="max-w-6xl mx-auto px-5 pt-12 pb-20 sm:pt-16 sm:pb-24">
+      <div class="max-w-2xl">
+        <div class="inline-flex items-center gap-2 glass rounded-full px-3 py-2 text-sm text-emerald-50 mb-6">
+          <span class="w-2 h-2 bg-emerald-300 rounded-full"></span>
+          Your world, a little closer
+        </div>
+
+        <h1 class="hero-title text-4xl sm:text-6xl font-extrabold leading-tight tracking-tight">
+          Find your next<br>
+          <span class="text-emerald-200">favourite place.</span>
+        </h1>
+
+        <p class="text-emerald-50/90 mt-5 text-base sm:text-lg leading-8 max-w-xl">
+          Discover libraries, cafes, hospitals and hidden gems.
+          Tell us where you're going, and let MapEase help you explore.
+        </p>
+
+        <div class="flex flex-wrap gap-3 mt-7">
+          <div class="glass rounded-xl px-4 py-3 text-sm">
+            <span class="block text-lg font-bold">01</span>
+            Choose a location
+          </div>
+          <div class="glass rounded-xl px-4 py-3 text-sm">
+            <span class="block text-lg font-bold">02</span>
+            Pick a category
+          </div>
+          <div class="glass rounded-xl px-4 py-3 text-sm">
+            <span class="block text-lg font-bold">03</span>
+            Start exploring
+          </div>
+        </div>
+      </div>
+    </section>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-5 pb-12">
+
+    <!-- SEARCH FORM -->
+    <section class="search-panel bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-emerald-950/5 border border-slate-100 p-5 sm:p-8">
+      <div class="flex items-start gap-3 mb-6">
+        <div class="result-icon text-2xl">⌕</div>
+        <div>
+          <h2 class="text-xl sm:text-2xl font-bold">Where should we explore?</h2>
+          <p class="text-slate-500 mt-1 text-sm sm:text-base">
+            Enter an area and choose what you need.
+          </p>
+        </div>
+      </div>
+
+      <form id="searchForm">
+        <div class="grid grid-cols-1 md:grid-cols-[1.4fr_1fr_auto] gap-4 items-end">
+
+          <div>
+            <label for="location" class="block text-sm font-bold mb-2">
+              Your destination
+            </label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-lg">📍</span>
+              <input
+                id="location"
+                class="field pl-11"
+                type="text"
+                placeholder="e.g. Bengaluru, India"
+                required
+                minlength="2"
+                maxlength="100"
+                autocomplete="off"
+              >
+            </div>
+          </div>
+
+          <div>
+            <label for="category" class="block text-sm font-bold mb-2">
+              What are you looking for?
+            </label>
+            <select id="category" class="field">
+              <option value="library">📚 Libraries</option>
+              <option value="hospital">🏥 Hospitals</option>
+              <option value="restaurant">🍽️ Restaurants</option>
+              <option value="cafe">☕ Cafes</option>
+              <option value="pharmacy">💊 Pharmacies</option>
+              <option value="school">🎓 Schools</option>
+            </select>
+          </div>
+
+          <button id="searchButton" type="submit"
+                  class="primary-btn rounded-xl px-6 py-3.5 font-bold whitespace-nowrap">
+            Search places →
+          </button>
+        </div>
+
+        <div class="mt-5">
+          <p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3">
+            Popular categories
+          </p>
+          <div class="flex flex-wrap gap-2" id="categoryChips">
+            <button type="button" class="category-btn active rounded-full px-4 py-2 text-sm" data-category="library">📚 Libraries</button>
+            <button type="button" class="category-btn rounded-full px-4 py-2 text-sm" data-category="hospital">🏥 Hospitals</button>
+            <button type="button" class="category-btn rounded-full px-4 py-2 text-sm" data-category="restaurant">🍽️ Restaurants</button>
+            <button type="button" class="category-btn rounded-full px-4 py-2 text-sm" data-category="cafe">☕ Cafes</button>
+            <button type="button" class="category-btn rounded-full px-4 py-2 text-sm" data-category="pharmacy">💊 Pharmacies</button>
+            <button type="button" class="category-btn rounded-full px-4 py-2 text-sm" data-category="school">🎓 Schools</button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- RESULTS -->
+    <section class="mt-10 sm:mt-12">
+      <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
+        <div>
+          <p class="text-emerald-700 text-xs font-extrabold uppercase tracking-widest mb-2">
+            Your discovery list
+          </p>
+          <h2 class="text-2xl sm:text-3xl font-extrabold">Places to explore</h2>
+          <p class="text-slate-500 text-sm mt-2">
+            Useful places, one search away.
+          </p>
+        </div>
+
+        <button type="button" id="clearButton"
+                class="border border-slate-200 bg-white rounded-xl px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">
+          Clear results
+        </button>
+      </div>
+
+      <div id="status" role="status" aria-live="polite"
+           class="status-box neutral mb-5">
+        Welcome! Enter a location above to discover places.
+      </div>
+
+      <div id="results" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="mt-14 sm:mt-16">
+      <div class="text-center max-w-xl mx-auto mb-7">
+        <p class="text-emerald-700 text-xs font-extrabold uppercase tracking-widest">
+          Simple by design
+        </p>
+        <h2 class="text-2xl sm:text-3xl font-extrabold mt-2">Explore in three steps</h2>
+        <p class="text-slate-500 mt-2">Less searching. More discovering.</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <article class="bg-white border border-slate-100 rounded-2xl p-6">
+          <div class="result-icon mb-4">📍</div>
+          <h3 class="font-bold text-lg">Choose your area</h3>
+          <p class="text-sm text-slate-500 mt-2 leading-6">
+            Enter a city or neighbourhood you want to explore.
+          </p>
+        </article>
+
+        <article class="bg-white border border-slate-100 rounded-2xl p-6">
+          <div class="result-icon mb-4">🔎</div>
+          <h3 class="font-bold text-lg">Find what you need</h3>
+          <p class="text-sm text-slate-500 mt-2 leading-6">
+            Pick a category and retrieve matching place records.
+          </p>
+        </article>
+
+        <article class="bg-white border border-slate-100 rounded-2xl p-6">
+          <div class="result-icon mb-4">🧭</div>
+          <h3 class="font-bold text-lg">Explore the location</h3>
+          <p class="text-sm text-slate-500 mt-2 leading-6">
+            Open a result on OpenStreetMap to inspect its position.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="mt-14 border-t border-slate-200 pt-6 pb-3">
+      <div class="flex flex-col sm:flex-row justify-between gap-4 text-sm text-slate-500">
+        <div>
+          <p class="font-extrabold text-slate-800 text-base">MapEase</p>
+          <p class="mt-1">A simpler way to discover your surroundings.</p>
+        </div>
+        <div class="sm:text-right">
+          <p>Search data powered by OpenStreetMap Nominatim.</p>
+          <p class="mt-1">
+            Map data ©
+            <a href="https://www.openstreetmap.org/copyright"
+               target="_blank" rel="noopener noreferrer"
+               class="text-emerald-700 underline">OpenStreetMap contributors</a>.
+          </p>
+        </div>
+      </div>
+    </footer>
+
+  </main>
+
+  <script>
+    const form = document.getElementById("searchForm");
+    const locationInput = document.getElementById("location");
+    const categoryInput = document.getElementById("category");
+    const searchButton = document.getElementById("searchButton");
+    const clearButton = document.getElementById("clearButton");
+    const statusBox = document.getElementById("status");
+    const resultsBox = document.getElementById("results");
+    const categoryChips = document.getElementById("categoryChips");
+
+    const categoryNames = {
+      library: "Libraries",
+      hospital: "Hospitals",
+      restaurant: "Restaurants",
+      cafe: "Cafes",
+      pharmacy: "Pharmacies",
+      school: "Schools"
+    };
+
+    const categoryIcons = {
+      library: "📚",
+      hospital: "🏥",
+      restaurant: "🍽️",
+      cafe: "☕",
+      pharmacy: "💊",
+      school: "🎓"
+    };
+
+    function setStatus(message, type = "neutral") {
+      statusBox.textContent = message;
+      statusBox.className = "status-box mb-5";
+
+      if (type === "error") {
+        statusBox.classList.add("error");
+      } else if (type === "neutral") {
+        statusBox.classList.add("neutral");
+      }
+    }
+
+    function updateCategoryChips() {
+      document.querySelectorAll(".category-btn").forEach(function (chip) {
+        const selected = chip.dataset.category === categoryInput.value;
+
+        chip.classList.toggle("active", selected);
+        chip.setAttribute("aria-pressed", String(selected));
+      });
+    }
+
+    // Category chips
+    categoryChips.addEventListener("click", function (event) {
+      const chip = event.target.closest("[data-category]");
+
+      if (!chip) return;
+
+      categoryInput.value = chip.dataset.category;
+      updateCategoryChips();
+
+      setStatus(
+        categoryNames[categoryInput.value] +
+        " selected. Enter a location and search."
+      );
+    });
+
+    // Dropdown change
+    categoryInput.addEventListener("change", function () {
+      updateCategoryChips();
+
+      setStatus(
+        categoryNames[categoryInput.value] +
+        " selected. Enter a location and search."
+      );
+    });
+
+    // Input validation
+    locationInput.addEventListener("input", function () {
+      const value = locationInput.value.trim();
+
+      locationInput.setCustomValidity(
+        value.length > 0 && value.length < 2
+          ? "Please enter at least 2 characters."
+          : ""
+      );
+    });
+
+    // Search form and Fetch API
+    form.addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      const location = locationInput.value.trim();
+      const category = categoryInput.value;
+
+      if (location.length < 2) {
+        locationInput.setCustomValidity(
+          "Please enter at least 2 characters."
+        );
+        locationInput.reportValidity();
+        return;
+      }
+
+      locationInput.setCustomValidity("");
+      resultsBox.replaceChildren();
+
+      setStatus("Searching for " + categoryNames[category] + "...");
+
+      searchButton.disabled = true;
+      searchButton.textContent = "Searching...";
+
+      resultsBox.innerHTML =
+        '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
+
+      try {
+        const url = new URL(
+          "https://nominatim.openstreetmap.org/search"
+        );
+
+        url.search = new URLSearchParams({
+          q: category + " in " + location,
+          format: "jsonv2",
+          addressdetails: "1",
+          limit: "9"
+        }).toString();
+
+        const response = await fetch(url.toString());
+
+        if (!response.ok) {
+          throw new Error("Search service returned an error.");
+        }
+
+        const data = await response.json();
+
+        if (!Array.isArray(data)) {
+          throw new Error("Unexpected search response.");
+        }
+
+        resultsBox.replaceChildren();
+
+        if (data.length === 0) {
+          setStatus(
+            "No matching places found. Try another location or category."
+          );
+          return;
+        }
+
+        setStatus(
+          data.length + " result(s) found for " +
+          categoryNames[category] + " in " + location + ".",
+          "success"
+        );
+
+        data.forEach(function (place, index) {
+          const card = document.createElement("article");
+          card.className = "result-card";
+          card.style.animationDelay = (index * 45) + "ms";
+
+          const top = document.createElement("div");
+          top.className = "flex items-start gap-3 mb-4";
+
+          const icon = document.createElement("div");
+          icon.className = "result-icon";
+          icon.textContent = categoryIcons[category];
+
+          const headingWrap = document.createElement("div");
+          headingWrap.className = "min-w-0 flex-1";
+
+          const title = document.createElement("h3");
+          title.className = "font-bold text-base leading-6 break-words";
+          title.textContent =
+            place.name ||
+            (place.display_name || "Unnamed place").split(",")[0];
+
+          const badge = document.createElement("span");
+          badge.className =
+            "inline-block mt-2 text-xs font-semibold text-emerald-800 bg-emerald-50 rounded-full px-2.5 py-1";
+          badge.textContent = categoryNames[category];
+
+          headingWrap.append(title, badge);
+          top.append(icon, headingWrap);
+
+          const address = document.createElement("p");
+          address.className = "text-sm text-slate-500 leading-6 mb-5 break-words";
+          address.textContent =
+            place.display_name || "Address details unavailable.";
+
+          const link = document.createElement("a");
+          link.className = "map-link text-sm";
+          link.textContent = "View on OpenStreetMap ↗";
+          link.href =
+            "https://www.openstreetmap.org/?mlat=" +
+            encodeURIComponent(place.lat) +
+            "&mlon=" +
+            encodeURIComponent(place.lon) +
+            "#map=16/" +
+            encodeURIComponent(place.lat) +
+            "/" +
+            encodeURIComponent(place.lon);
+
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+
+          card.append(top, address, link);
+          resultsBox.appendChild(card);
+        });
+
+      } catch (error) {
+        console.error("MapEase search error:", error);
+        resultsBox.replaceChildren();
+
+        setStatus(
+          "We couldn't load the places. Check your internet connection and try again.",
+          "error"
+        );
+
+      } finally {
+        searchButton.disabled = false;
+        searchButton.textContent = "Search places →";
+      }
+    });
+
+    // Clear form and results
+    clearButton.addEventListener("click", function () {
+      form.reset();
+      resultsBox.replaceChildren();
+
+      locationInput.setCustomValidity("");
+      updateCategoryChips();
+
+      setStatus("Your search has been cleared. Ready to explore!");
+      locationInput.focus();
+    });
+
+    updateCategoryChips();
+  </script>
+
+</body>
+</html>
